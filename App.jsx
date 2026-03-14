@@ -7,6 +7,7 @@ import FilterBar from './components/FilterBar';
 import TeamPanel from './components/TeamPanel';
 
 export default function App() {
+  const [selectedAttr, setSelectedAttr] = useState('全て');
   const [selectedTags, setSelectedTags] = useState([]);
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'characters' (mobile only)
 
@@ -54,8 +55,6 @@ export default function App() {
   const {
     recommendations,
   } = useTeamBuilder(characters, ownedIds, tagsData, selectedAttr, selectedTags);
-
-  const [showTeamPanel, setShowTeamPanel] = useState(true);
 
   if (loading) {
     return (
