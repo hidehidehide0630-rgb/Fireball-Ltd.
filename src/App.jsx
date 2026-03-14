@@ -9,6 +9,7 @@ import TeamPanel from './components/TeamPanel';
 export default function App() {
   const [selectedAttr, setSelectedAttr] = useState('全て');
   const [selectedTags, setSelectedTags] = useState([]);
+  const [activeTab, setActiveTab] = useState('team'); // 'team' or 'characters' (mobile only)
 
   const { tagsData } = useTagsData();
 
@@ -55,8 +56,6 @@ export default function App() {
     recommendations,
   } = useTeamBuilder(characters, ownedIds, tagsData, selectedAttr, selectedTags);
 
-  const [showTeamPanel, setShowTeamPanel] = useState(true);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -98,7 +97,7 @@ export default function App() {
               <h1 className="text-lg font-black tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                 バウンティラッシュ
               </h1>
-              <p className="text-[10px] text-slate-500 -mt-0.5">サポート編成ツール</p>
+              <p className="text-[10px] text-slate-500 -mt-0.5">サポート設定・編成シミュレーター</p>
             </div>
           </div>
 
@@ -117,45 +116,58 @@ export default function App() {
             >
               全解除
             </button>
-            <button
-              id="btn-toggle-team-panel"
-              onClick={() => setShowTeamPanel(prev => !prev)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
-                ${showTeamPanel
-                  ? 'bg-indigo-600/30 text-indigo-300'
-                  : 'bg-slate-700/60 text-slate-400 hover:bg-slate-600/80'
-                }`}
-            >
-              {showTeamPanel ? '👑 編成' : '👑 編成'}
-            </button>
           </div>
         </div>
       </header>
 
+      {/* Mobile Tab Switcher */}
+      <div className="md:hidden sticky top-[61px] z-40 bg-slate-900 border-b border-slate-700/50 p-1 flex">
+        <button
+          onClick={() => setActiveTab('team')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'team'
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'text-slate-400 hover:text-slate-200'
+            }`}
+        >
+          👑 サポート設定・編成
+        </button>
+        <button
+          onClick={() => setActiveTab('characters')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'characters'
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'text-slate-400 hover:text-slate-200'
+            }`}
+        >
+          👥 キャラクター一覧
+        </button>
+      </div>
+
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 pt-5 pb-24 md:pb-8">
-        <div className={`flex flex-col md:flex-row gap-5 ${showTeamPanel ? '' : ''}`}>
+        <div className="flex flex-col md:flex-row gap-5">
           {/* Team Panel (Left / Sidebar) */}
-          {showTeamPanel && (
-            <aside id="team-panel" className="w-full md:w-[380px] flex-shrink-0 space-y-4 md:sticky md:top-16 md:self-start md:max-h-[calc(100vh-5rem)] overflow-y-auto pb-4 scrollbar-thin">
-              <TeamPanel
-                allTags={tagsData ? allTags.filter(t => {
-                  const tagObj = tagsData.find(dt => dt.name === t);
-                  return tagObj && tagObj.effects && tagObj.effects.some(e => e.stage === 1 && e.description && e.description.trim() !== '');
-                }) : allTags}
-                tagsData={tagsData}
-                selectedAttr={selectedAttr}
-                setSelectedAttr={setSelectedAttr}
-                selectedTags={selectedTags}
-                toggleTag={toggleTag}
-                clearTags={clearTags}
-                recommendations={recommendations}
-              />
-            </aside>
-          )}
+          <aside
+            id="team-panel"
+            className={`w-full md:w-[380px] flex-shrink-0 space-y-4 md:sticky md:top-16 md:self-start md:max-h-[calc(100vh-5rem)] overflow-y-auto pb-4 scrollbar-thin 
+              ${activeTab === 'team' ? 'block' : 'hidden md:block'}`}
+          >
+            <TeamPanel
+              allTags={tagsData ? allTags.filter(t => {
+                const tagObj = tagsData.find(dt => dt.name === t);
+                return tagObj && tagObj.effects && tagObj.effects.some(e => e.stage === 1 && e.description && e.description.trim() !== '');
+              }) : allTags}
+              tagsData={tagsData}
+              selectedAttr={selectedAttr}
+              setSelectedAttr={setSelectedAttr}
+              selectedTags={selectedTags}
+              toggleTag={toggleTag}
+              clearTags={clearTags}
+              recommendations={recommendations}
+            />
+          </aside>
 
           {/* Character List (Right / Main) */}
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className={`flex-1 min-w-0 space-y-4 ${activeTab === 'characters' ? 'block' : 'hidden md:block'}`}>
             <FilterBar
               filter={filter}
               setFilter={setFilter}
@@ -194,20 +206,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Floating Action Button for Mobile */}
-      <div className="fixed bottom-6 right-6 md:hidden z-50">
-        <button
-          onClick={() => {
-            setShowTeamPanel(true);
-            setTimeout(() => {
-              document.getElementById('team-panel')?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-          }}
-          className="flex items-center gap-2 justify-center bg-indigo-600 text-white font-bold px-5 py-3 rounded-full shadow-2xl hover:bg-indigo-500 transition-transform active:scale-95 border-2 border-indigo-400"
-        >
-          👑 <span className="text-sm">編成を見る</span>
-        </button>
-      </div>
     </div>
   );
 }
