@@ -122,7 +122,7 @@ export default function TeamPanel({
                     👑
                 </div>
                 <div>
-                    <h2 className="text-xl font-bold text-white">サポート編成</h2>
+                    <h2 className="text-xl font-bold text-white">サポート設定・編成</h2>
                     <p className="text-xs text-slate-400">属性とタグを選んで最適なサポートを算出</p>
                 </div>
             </div>
