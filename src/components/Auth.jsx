@@ -17,14 +17,17 @@ export default function Auth({ user }) {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
-      // 確実にゲスト状態に戻すため、ローカルデータをクリアしてリロード
-      localStorage.removeItem('bounty-rush-user-id')
-      window.location.reload()
+      // ログアウト処理に2秒の制限を設け、応答がなくても強制リロードに進む
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+      ]);
     } catch (err) {
-      console.error('Logout Error:', err.message)
-      // エラーでも強制リロード
-      window.location.reload()
+      console.warn('Logout timed out or failed, forcing UI reset:', err.message);
+    } finally {
+      // 確実にゲスト状態に戻すため、ローカルデータをクリアしてリロード
+      localStorage.removeItem('bounty-rush-user-id');
+      window.location.reload();
     }
   }
 

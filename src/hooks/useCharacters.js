@@ -7,16 +7,12 @@ const USER_ID_STORAGE_KEY = 'bounty-rush-user-id';
 export function useCharacters(selectedTags = []) {
     const [characters, setCharacters] = useState([]);
     const [ownedIds, setOwnedIds] = useState(new Set());
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [filter, setFilter] = useState({ 
-        attr: ['全て'], 
-        style: ['全て'], 
-        rarity: ['全て'], 
-        keyword: '' 
-    });
-    
-    // Auth status - null until confirmed by Supabase
+    const [loading, setLoading]- [x] Previous Attempts (1-12) <!-- id: 0 -->
+- [x] Async Safety & Timeout Wrapper (Attempt 13) <!-- id: 1 -->
+    - [x] Create promiseWithTimeout utility <!-- id: 2 -->
+    - [x] Wrap all Supabase calls (Auth & DB) in timeouts <!-- id: 3 -->
+    - [x] Force logout reload regardless of signOut response <!-- id: 4 -->
+    - [x] Ensure Sync status always resolves (success/fail/timeout) <!-- id: 5 -->
     const [user, setUser] = useState(null);
     const [syncStatus, setSyncStatus] = useState('未実行');
 
@@ -123,15 +119,27 @@ export function useCharacters(selectedTags = []) {
         };
     }, []);
 
+    // 【便利】非同期処理にタイムアウトを設けるラッパー
+    const withTimeout = (promise, ms, timeoutMsg = 'タイムアウト') => {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error(timeoutMsg)), ms))
+        ]);
+    };
+
     // 【鉄壁】クラウドからデータを取得（DBを絶対的正解とする）
     const fetchFromCloud = async (userId) => {
         setSyncStatus('DB取得中...');
         try {
-            const { data, error } = await supabase
-                .from('user_characters')
-                .select('character_ids')
-                .eq('user_id', userId)
-                .single();
+            const { data, error } = await withTimeout(
+                supabase
+                    .from('user_characters')
+                    .select('character_ids')
+                    .eq('user_id', userId)
+                    .single(),
+                5000,
+                'DB接続タイムアウト'
+            );
 
             if (error && error.code !== 'PGRST116') throw error;
 
@@ -140,14 +148,14 @@ export function useCharacters(selectedTags = []) {
                 const dbIds = new Set(data.character_ids);
                 setOwnedIds(dbIds);
                 saveOwned(dbIds); // Localはミラーとしてのみ利用
-                setSyncStatus('DB同期完了');
+                setSyncStatus('DB同期完了 ✅');
                 console.log('✅ DBから復元成功:', userId);
             } else {
-                setSyncStatus('DB空(初期状態)');
+                setSyncStatus('DB空(新規利用)');
             }
         } catch (err) {
             console.error('❌ DB取得エラー:', err);
-            setSyncStatus('DB取得失敗');
+            setSyncStatus(err.message === 'DB接続タイムアウト' ? '取得失敗(タイムアウト)' : '取得失敗');
         } finally {
             setLoading(false);
         }
@@ -170,16 +178,20 @@ export function useCharacters(selectedTags = []) {
                 }
 
                 const userId = session.user.id;
-                const { error } = await supabase
-                    .from('user_characters')
-                    .upsert(
-                        { 
-                            user_id: userId, 
-                            character_ids: Array.from(ids),
-                            updated_at: new Date().toISOString()
-                        },
-                        { onConflict: 'user_id' }  // ← user_id で衝突時に更新
-                    );
+                const { error } = await withTimeout(
+                    supabase
+                        .from('user_characters')
+                        .upsert(
+                            { 
+                                user_id: userId, 
+                                character_ids: Array.from(ids),
+                                updated_at: new Date().toISOString()
+                            },
+                            { onConflict: 'user_id' }
+                        ),
+                    5000,
+                    '保存タイムアウト'
+                );
                 
                 if (error) throw error;
                 
@@ -187,9 +199,9 @@ export function useCharacters(selectedTags = []) {
                 console.log('✅ DB保存成功:', userId, '件数:', ids.size);
             } catch (err) {
                 console.error('❌ DB保存エラー:', err);
-                setSyncStatus('保存失敗: ' + err.message);
+                setSyncStatus(err.message === '保存タイムアウト' ? '保存失敗(タイムアウト)' : '保存失敗');
             }
-        }, 500);  // 500msに短縮（体感を改善）
+        }, 500); 
     }, []);
 
 
