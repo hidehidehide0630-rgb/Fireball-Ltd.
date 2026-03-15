@@ -10,6 +10,14 @@ import Auth from './components/Auth';
 import CharacterSelectModal from './components/CharacterSelectModal';
 
 export default function App() {
+  // ========================================
+  // URL Normalization: ハッシュを即座に消去してPC版誤認を防止
+  // ========================================
+  if (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery'))) {
+    // ハッシュが存在し、かつ認証に関わるキーワードが含まれる場合のみ即座にクリーンアップ
+    window.history.replaceState(null, null, window.location.pathname);
+  }
+
   const [selectedAttr, setSelectedAttr] = useState('全て');
   const [selectedTags, setSelectedTags] = useState([]);
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'characters' (mobile only)
@@ -18,39 +26,6 @@ export default function App() {
   const [activeSlotIndex, setActiveSlotIndex] = useState(null);
 
   const { tagsData } = useTagsData();
-
-  // ========================================
-  // URL Normalization: 認証完了後にURLを強制クリーンアップ
-  // Supabaseの認証イベントを直接監視し、SIGNED_INの瞬間にURLを書き換える
-  // ========================================
-  const urlCleaned = useRef(false);
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' && !urlCleaned.current) {
-        urlCleaned.current = true;
-        // 認証パラメータを完全に除去し、クリーンなURLに強制書き換え
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    });
-
-    // 初回ロード時: ハッシュに認証情報が残っている場合もクリーンアップ
-    // (onAuthStateChangeが先にSIGNED_INを処理した後に実行される)
-    const cleanupTimer = setTimeout(() => {
-      const hasAuthHash = window.location.hash.includes('access_token=');
-      const hasAuthSearch = window.location.search.includes('code=');
-      if ((hasAuthHash || hasAuthSearch) && !urlCleaned.current) {
-        urlCleaned.current = true;
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    }, 3000); // 3秒後にフォールバック
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(cleanupTimer);
-    };
-  }, []);
 
   const toggleTag = (tag) => {
     setSelectedTags(prev => {
@@ -87,6 +62,7 @@ export default function App() {
     setAllPermanentOwned,
     generateShareUrl,
     allTags,
+    user,
   } = useCharacters(selectedTags);
 
   const {
@@ -95,7 +71,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ overflowX: 'hidden', width: '100vw' }}
+      >
         <div className="text-center space-y-4">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-slate-400 text-sm">データを読み込み中...</p>
@@ -106,7 +85,10 @@ export default function App() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div 
+        className="min-h-screen flex items-center justify-center"
+        style={{ overflowX: 'hidden', width: '100vw' }}
+      >
         <div className="text-center space-y-3 glass p-8 rounded-2xl max-w-md">
           <p className="text-4xl">❌</p>
           <p className="text-red-400 font-semibold">エラーが発生しました</p>
@@ -122,7 +104,7 @@ export default function App() {
   const ownedCount = [...ownedIds].filter(id => characters.some(c => c.id === id)).length;
 
   return (
-    <div className="min-h-screen pb-8">
+    <div className="min-h-screen pb-8" style={{ overflowX: 'hidden', width: '100vw' }}>
       {/* Header */}
       <header className="sticky top-0 z-50 glass-strong border-b border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
