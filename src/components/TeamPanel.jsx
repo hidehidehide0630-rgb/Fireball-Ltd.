@@ -3,6 +3,7 @@ import TagSelector from './TagSelector';
 import domtoimage from 'dom-to-image-more';
 import { useSavedTeams } from '../hooks/useSavedTeams';
 import ShareImageTemplate from './ShareImageTemplate';
+import BattleCharacterSelector from './BattleCharacterSelector';
 
 const ATTR_OPTIONS = [
     { value: '赤', label: '赤', color: 'bg-red-500', ring: 'ring-red-500/50' },
@@ -29,6 +30,9 @@ export default function TeamPanel({
     toggleTag,
     clearTags,
     recommendations = [],
+    battleCharacters,
+    onOpenSelector,
+    characters,
 }) {
     const [activeTabIndex, setActiveTabIndex] = useState(0);
     const panelRef = useRef(null);
@@ -115,7 +119,15 @@ export default function TeamPanel({
     const { team, tagEffects } = currentRec;
 
     return (
-        <div className="glass-strong rounded-2xl p-5 space-y-5">
+        <div className="space-y-4">
+            {/* Battle Character Selection Section */}
+            <BattleCharacterSelector 
+                battleCharacters={battleCharacters}
+                characters={characters} 
+                onOpenSelector={onOpenSelector}
+            />
+
+            <div className="glass-strong rounded-2xl p-5 space-y-5">
             {/* Header */}
             <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xl shadow-lg">
@@ -363,6 +375,7 @@ export default function TeamPanel({
             )}
 
             <ShareImageTemplate ref={shareImageRef} team={team} tagEffects={tagEffects} />
+        </div>
         </div>
     );
 }
