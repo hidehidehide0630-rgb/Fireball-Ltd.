@@ -16,8 +16,16 @@ export default function Auth({ user }) {
   }
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) console.error('Logout Error:', error.message)
+    try {
+      await supabase.auth.signOut()
+      // 確実にゲスト状態に戻すため、ローカルデータをクリアしてリロード
+      localStorage.removeItem('bounty-rush-user-id')
+      window.location.reload()
+    } catch (err) {
+      console.error('Logout Error:', err.message)
+      // エラーでも強制リロード
+      window.location.reload()
+    }
   }
 
   return (

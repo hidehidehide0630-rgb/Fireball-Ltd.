@@ -165,30 +165,31 @@ export function useCharacters(selectedTags = []) {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     console.warn('保存スキップ: セッションなし');
+                    setSyncStatus('未ログイン');
                     return;
                 }
 
                 const userId = session.user.id;
                 const { error } = await supabase
                     .from('user_characters')
-                    .upsert({ 
-                        user_id: userId, 
-                        character_ids: Array.from(ids),
-                        updated_at: new Date().toISOString()
-                    });
+                    .upsert(
+                        { 
+                            user_id: userId, 
+                            character_ids: Array.from(ids),
+                            updated_at: new Date().toISOString()
+                        },
+                        { onConflict: 'user_id' }  // ← user_id で衝突時に更新
+                    );
                 
                 if (error) throw error;
                 
-                setSyncStatus('保存成功');
-                console.log('✅ DB保存成功:', userId);
-                // デバッグ用通知（ユーザーの要望）
-                // alert('✅ データがサーバーに保存されました');
+                setSyncStatus('保存成功 ✅');
+                console.log('✅ DB保存成功:', userId, '件数:', ids.size);
             } catch (err) {
                 console.error('❌ DB保存エラー:', err);
-                setSyncStatus('保存失敗');
-                alert('❌ サーバーへの保存に失敗しました');
+                setSyncStatus('保存失敗: ' + err.message);
             }
-        }, 2000); 
+        }, 500);  // 500msに短縮（体感を改善）
     }, []);
 
 
