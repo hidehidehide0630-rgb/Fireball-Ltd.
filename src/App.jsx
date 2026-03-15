@@ -24,17 +24,6 @@ export default function App() {
   // 【鉄壁】Viewportと初期化の最終調整
   // ========================================
   useEffect(() => {
-    // URLハッシュの強制清掃（PC版誤認対策）
-    const hasAuthParams = window.location.hash.includes('access_token=') || 
-                         window.location.hash.includes('type=recovery') ||
-                         window.location.search.includes('code=');
-    
-    if (hasAuthParams) {
-      window.location.hash = '';
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState(null, null, cleanUrl);
-    }
-
     // Viewportの強制リセット
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
