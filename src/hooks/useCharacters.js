@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'bounty-rush-owned-characters';
+const USER_ID_STORAGE_KEY = 'bounty-rush-user-id';
 
 export function useCharacters(selectedTags = []) {
     const [characters, setCharacters] = useState([]);
@@ -14,7 +15,14 @@ export function useCharacters(selectedTags = []) {
         rarity: ['全て'], 
         keyword: '' 
     });
-    const [user, setUser] = useState(null);
+    
+    // Auth status
+    const [user, setUser] = useState(() => {
+        const savedId = localStorage.getItem(USER_ID_STORAGE_KEY);
+        return savedId ? { id: savedId, isFallback: true } : null;
+    });
+    const [syncStatus, setSyncStatus] = useState('未実行');
+
     const isInitialLoad = useRef(true);
     const syncTimeoutRef = useRef(null);
 
@@ -37,18 +45,23 @@ export function useCharacters(selectedTags = []) {
 
         // Auth state
         supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                fetchFromCloud(session.user.id);
+            const newUser = session?.user ?? null;
+            if (newUser) {
+                localStorage.setItem(USER_ID_STORAGE_KEY, newUser.id);
+                setUser(newUser);
+                fetchFromCloud(newUser.id);
             }
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             const newUser = session?.user ?? null;
-            setUser(newUser);
-            // ログインした瞬間にクラウドからデータを取得
             if (newUser) {
+                localStorage.setItem(USER_ID_STORAGE_KEY, newUser.id);
+                setUser(newUser);
                 fetchFromCloud(newUser.id);
+            } else if (event === 'SIGNED_OUT') {
+                localStorage.removeItem(USER_ID_STORAGE_KEY);
+                setUser(null);
             }
         });
 
@@ -57,6 +70,7 @@ export function useCharacters(selectedTags = []) {
 
     // クラウドからデータを取得してローカルとマージ
     const fetchFromCloud = async (userId) => {
+        setSyncStatus('取得中...');
         try {
             const { data, error } = await supabase
                 .from('user_characters')
@@ -71,11 +85,15 @@ export function useCharacters(selectedTags = []) {
                     saveOwned(merged);
                     return merged;
                 });
+                setSyncStatus('同期済み');
+                console.log('✅ Cloud Fetch Success:', userId);
             }
         } catch (err) {
-            // データがまだない場合は 406 (Not Acceptable) 等が返る場合があるが無視して良い
             if (err.code !== 'PGRST116') {
-                console.error('Cloud fetch error:', err);
+                console.error('❌ Cloud fetch error:', err);
+                setSyncStatus('取得失敗');
+            } else {
+                setSyncStatus('データなし');
             }
         }
     };
@@ -84,17 +102,25 @@ export function useCharacters(selectedTags = []) {
     const syncToCloud = useCallback((userId, ids) => {
         if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
         
+        setSyncStatus('待機中...');
         syncTimeoutRef.current = setTimeout(async () => {
+            setSyncStatus('保存中...');
             try {
-                await supabase
+                const { error } = await supabase
                     .from('user_characters')
                     .upsert({ 
                         user_id: userId, 
                         character_ids: Array.from(ids),
                         updated_at: new Date().toISOString()
                     });
+                
+                if (error) throw error;
+                
+                setSyncStatus('保存成功');
+                console.log('✅ Cloud Sync Success:', userId);
             } catch (err) {
-                console.error('Cloud sync error:', err);
+                console.error('❌ Cloud sync error:', err);
+                setSyncStatus('保存失敗');
             }
         }, 2000); 
     }, []);
@@ -244,6 +270,7 @@ export function useCharacters(selectedTags = []) {
         clearAllOwned,
         generateShareUrl,
         user,
+        syncStatus,
         allTags,
         allAttrs,
         allStyles,

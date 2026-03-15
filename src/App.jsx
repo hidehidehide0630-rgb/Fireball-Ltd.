@@ -21,30 +21,34 @@ export default function App() {
   const { tagsData } = useTagsData();
 
   // ========================================
-  // 認証とリロードの制御
+  // 【防弾仕様】認証とリロードの制御
   // ========================================
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // 1. セッションを確認
+        // ① 直接取得: セッションを即座に確認
         const { data: { session } } = await supabase.auth.getSession();
         
-        // 2. セッションが取得でき、かつURLに認証情報（ハッシュ等）がある場合のみリロード
-        // これにより、Supabaseが認証を完了させた後にURLを掃除してリセット（PC版誤認解除）をかける
         const hasAuthParams = window.location.hash.includes('access_token=') || 
                              window.location.hash.includes('type=recovery') ||
                              window.location.search.includes('code=');
 
-        if (session && hasAuthParams) {
-          const cleanUrl = window.location.origin + window.location.pathname;
-          window.history.replaceState(null, null, cleanUrl);
-          window.location.reload(); // ここでリロードしてPC版誤認を解除
-          return;
+        if (session) {
+          // ログイン中：IDをLocalStorageに保存（救済用）
+          localStorage.setItem('bounty-rush-user-id', session.user.id);
+
+          // 認証ハッシュがある場合、最速でURLを清掃（PC版誤認対策）
+          if (hasAuthParams) {
+            window.location.hash = ''; // 【強制清掃】
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState(null, null, cleanUrl);
+            // 本来はリロードが必要な場合もありますが、まずはハッシュ消去を最優先
+          }
         }
 
         setAuthInitialized(true);
         
-        // Viewportの再設定
+        // Viewportの強制リセット（ブラウザに再認識させる）
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
           viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
@@ -57,9 +61,13 @@ export default function App() {
 
     initAuth();
 
-    // ログアウト時などの状態変化を監視
+    // ③ 常時監視: 状態変化を捉える
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
+      if (session) {
+        localStorage.setItem('bounty-rush-user-id', session.user.id);
+        setAuthInitialized(true);
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('bounty-rush-user-id');
         setAuthInitialized(true);
       }
     });
@@ -103,6 +111,7 @@ export default function App() {
     generateShareUrl,
     allTags,
     user,
+    syncStatus,
   } = useCharacters(selectedTags);
 
   const {
@@ -145,7 +154,8 @@ export default function App() {
   const ownedCount = [...ownedIds].filter(id => characters.some(c => c.id === id)).length;
 
   return (
-    <div className="min-h-screen pb-8" style={{ overflowX: 'hidden', width: '100vw' }}>
+    <>
+      <div className="min-h-screen pb-8" style={{ overflowX: 'hidden', width: '100vw' }}>
       {/* Header */}
       <header className="sticky top-0 z-50 glass-strong border-b border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -293,5 +303,25 @@ export default function App() {
         }}
       />
     </div>
+
+    {/* Debug Dashboard (期間限定) */}
+    <div className="fixed bottom-4 left-4 z-[9999] bg-black/90 text-[10px] p-3 rounded-lg border border-slate-700 shadow-2xl font-mono text-emerald-400 space-y-1 backdrop-blur-md">
+      <div className="flex justify-between gap-4">
+        <span className="text-slate-500">Auth:</span>
+        <span>{user ? (user.isFallback ? 'Fallback' : 'Authenticated') : (authInitialized ? 'Guest' : 'Loading')}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-slate-500">DB_ID:</span>
+        <span className="truncate max-w-[100px]">{user?.id || 'null'}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-slate-500">LocalStorage_ID:</span>
+        <span className="truncate max-w-[100px]">{localStorage.getItem('bounty-rush-user-id') || 'null'}</span>
+      </div>
+      <div className="flex justify-between gap-4">
+        <span className="text-slate-500">Last_Sync:</span>
+        <span className={syncStatus && syncStatus.includes('失敗') ? 'text-red-400' : 'text-emerald-400'}>{syncStatus || '未実行'}</span>
+      </div>
+    </>
   );
 }
