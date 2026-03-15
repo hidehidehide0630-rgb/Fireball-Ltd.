@@ -5,6 +5,7 @@ import { useTagsData } from './hooks/useTagsData';
 import CharacterCard from './components/CharacterCard';
 import FilterBar from './components/FilterBar';
 import TeamPanel from './components/TeamPanel';
+import Auth from './components/Auth';
 
 export default function App() {
   const [selectedAttr, setSelectedAttr] = useState('全て');
@@ -143,7 +144,8 @@ export default function App() {
       </div>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 pt-5 pb-24 md:pb-8">
+      <main className="max-w-7xl mx-auto px-4 pt-5 pb-24 md:pb-8 space-y-6">
+        <Auth />
         <div className="flex flex-col md:flex-row gap-5">
           {/* Team Panel (Left / Sidebar) */}
           <aside
