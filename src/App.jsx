@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCharacters } from './hooks/useCharacters';
 import { useTeamBuilder } from './hooks/useTeamBuilder';
 import { useTagsData } from './hooks/useTagsData';
+import { supabase } from './lib/supabaseClient';
 import CharacterCard from './components/CharacterCard';
 import FilterBar from './components/FilterBar';
 import TeamPanel from './components/TeamPanel';
@@ -18,6 +19,39 @@ export default function App() {
 
   const { tagsData } = useTagsData();
 
+  // ========================================
+  // URL Normalization: 認証完了後にURLを強制クリーンアップ
+  // Supabaseの認証イベントを直接監視し、SIGNED_INの瞬間にURLを書き換える
+  // ========================================
+  const urlCleaned = useRef(false);
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' && !urlCleaned.current) {
+        urlCleaned.current = true;
+        // 認証パラメータを完全に除去し、クリーンなURLに強制書き換え
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    });
+
+    // 初回ロード時: ハッシュに認証情報が残っている場合もクリーンアップ
+    // (onAuthStateChangeが先にSIGNED_INを処理した後に実行される)
+    const cleanupTimer = setTimeout(() => {
+      const hasAuthHash = window.location.hash.includes('access_token=');
+      const hasAuthSearch = window.location.search.includes('code=');
+      if ((hasAuthHash || hasAuthSearch) && !urlCleaned.current) {
+        urlCleaned.current = true;
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }, 3000); // 3秒後にフォールバック
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(cleanupTimer);
+    };
+  }, []);
+
   const toggleTag = (tag) => {
     setSelectedTags(prev => {
       if (prev.includes(tag)) {
@@ -28,7 +62,6 @@ export default function App() {
       if (tagsData) {
         const tagObj = tagsData.find(dt => dt.name === tag);
         if (tagObj && (tagObj.category === 'エリア' || tagObj.category === 'スタイル')) {
-          // 同一カテゴリのタグを既存の選択から外す
           nextTags = nextTags.filter(t => {
             const tObj = tagsData.find(dt => dt.name === t);
             return !(tObj && tObj.category === tagObj.category);
@@ -54,22 +87,7 @@ export default function App() {
     setAllPermanentOwned,
     generateShareUrl,
     allTags,
-    user, // user情報を取得
   } = useCharacters(selectedTags);
-
-  // URL Normalization: Remove auth params only AFTER user is loaded or auth params are present
-  useEffect(() => {
-    // 認証パラメータが存在する場合のみ実行
-    const hasAuthParams = window.location.search.includes('code=') || 
-                         window.location.search.includes('state=') || 
-                         window.location.hash.includes('access_token=');
-    
-    // ユーザー情報が同期された後、またはパラメータがある場合のみクリーンアップ
-    if (hasAuthParams && user) {
-      const newUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-    }
-  }, [user]); // userの変更を監視するように変更
 
   const {
     recommendations,

@@ -161,3 +161,40 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ========================================
+   Mobile Force Override
+   スマホでのリダイレクト後にPC版表示になるのを強制的に防止
+   ======================================== */
+@media screen and (max-width: 768px) {
+  /* メインレイアウトを強制的に縦並びに */
+  .flex.flex-col.md\:flex-row {
+    flex-direction: column !important;
+  }
+
+  /* サイドバーの幅を強制リセット */
+  aside#team-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    position: relative !important;
+    max-height: none !important;
+  }
+
+  /* ボディの最小幅を固定 */
+  html, body {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* グリッドの列数を強制 */
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+}
+
+/* 追加: 超小型スマホ向け */
+@media screen and (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+}
