@@ -7,12 +7,14 @@ const USER_ID_STORAGE_KEY = 'bounty-rush-user-id';
 export function useCharacters(selectedTags = []) {
     const [characters, setCharacters] = useState([]);
     const [ownedIds, setOwnedIds] = useState(new Set());
-    const [loading, setLoading]- [x] Previous Attempts (1-12) <!-- id: 0 -->
-- [x] Async Safety & Timeout Wrapper (Attempt 13) <!-- id: 1 -->
-    - [x] Create promiseWithTimeout utility <!-- id: 2 -->
-    - [x] Wrap all Supabase calls (Auth & DB) in timeouts <!-- id: 3 -->
-    - [x] Force logout reload regardless of signOut response <!-- id: 4 -->
-    - [x] Ensure Sync status always resolves (success/fail/timeout) <!-- id: 5 -->
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [filter, setFilter] = useState({ 
+        attr: ['全て'], 
+        style: ['全て'], 
+        rarity: ['全て'], 
+        keyword: '' 
+    });
     const [user, setUser] = useState(null);
     const [syncStatus, setSyncStatus] = useState('未実行');
 
