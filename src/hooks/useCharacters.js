@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 const STORAGE_KEY = 'bounty-rush-owned-characters';
 
@@ -13,9 +14,13 @@ export function useCharacters(selectedTags = []) {
         rarity: ['全て'], 
         keyword: '' 
     });
+    const [user, setUser] = useState(null);
+    const isInitialLoad = useRef(true);
+    const syncTimeoutRef = useRef(null);
 
-    // Load characters data
+    // Load characters and handle auth session
     useEffect(() => {
+        // Load characters
         fetch('./characters_data.json')
             .then(res => {
                 if (!res.ok) throw new Error('データの読み込みに失敗しました');
@@ -29,6 +34,69 @@ export function useCharacters(selectedTags = []) {
                 setError(err.message);
                 setLoading(false);
             });
+
+        // Auth state
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            if (session?.user) {
+                fetchFromCloud(session.user.id);
+            }
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            const newUser = session?.user ?? null;
+            setUser(newUser);
+            // ログインした瞬間にクラウドからデータを取得
+            if (newUser) {
+                fetchFromCloud(newUser.id);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    // クラウドからデータを取得してローカルとマージ
+    const fetchFromCloud = async (userId) => {
+        try {
+            const { data, error } = await supabase
+                .from('user_characters')
+                .select('character_ids')
+                .eq('user_id', userId)
+                .single();
+
+            if (data && data.character_ids) {
+                const cloudIds = new Set(data.character_ids);
+                setOwnedIds(prev => {
+                    const merged = new Set([...prev, ...cloudIds]);
+                    saveOwned(merged);
+                    return merged;
+                });
+            }
+        } catch (err) {
+            // データがまだない場合は 406 (Not Acceptable) 等が返る場合があるが無視して良い
+            if (err.code !== 'PGRST116') {
+                console.error('Cloud fetch error:', err);
+            }
+        }
+    };
+
+    // クラウドへ保存 (Debounced)
+    const syncToCloud = useCallback((userId, ids) => {
+        if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+        
+        syncTimeoutRef.current = setTimeout(async () => {
+            try {
+                await supabase
+                    .from('user_characters')
+                    .upsert({ 
+                        user_id: userId, 
+                        character_ids: Array.from(ids),
+                        updated_at: new Date().toISOString()
+                    });
+            } catch (err) {
+                console.error('Cloud sync error:', err);
+            }
+        }, 2000); 
     }, []);
 
     // Load owned status from localStorage or URL
@@ -85,23 +153,26 @@ export function useCharacters(selectedTags = []) {
                 next.add(id);
             }
             saveOwned(next);
+            if (user) syncToCloud(user.id, next);
             return next;
         });
-    }, [saveOwned]);
+    }, [saveOwned, user, syncToCloud]);
 
     // Bulk set all as owned
     const setAllOwned = useCallback(() => {
         const allIds = new Set(characters.map(c => c.id));
         setOwnedIds(allIds);
         saveOwned(allIds);
-    }, [characters, saveOwned]);
+        if (user) syncToCloud(user.id, allIds);
+    }, [characters, saveOwned, user, syncToCloud]);
 
     // Bulk set all as not owned
     const clearAllOwned = useCallback(() => {
         const empty = new Set();
         setOwnedIds(empty);
         saveOwned(empty);
-    }, [saveOwned]);
+        if (user) syncToCloud(user.id, empty);
+    }, [saveOwned, user, syncToCloud]);
 
 
     // Generate Share URL
@@ -172,6 +243,7 @@ export function useCharacters(selectedTags = []) {
         setAllOwned,
         clearAllOwned,
         generateShareUrl,
+        user,
         allTags,
         allAttrs,
         allStyles,
