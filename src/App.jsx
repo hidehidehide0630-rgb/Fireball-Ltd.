@@ -9,16 +9,6 @@ import TeamPanel from './components/TeamPanel';
 import Auth from './components/Auth';
 import CharacterSelectModal from './components/CharacterSelectModal';
 
-// ========================================
-// 1. 最優先ロジック: URLハッシュの消去と強制リフレッシュ
-// ブラウザの「PC版誤認」をリセット状態で解除するために実行
-// ========================================
-if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token=')) {
-  const cleanUrl = window.location.origin + window.location.pathname;
-  window.history.replaceState(null, null, cleanUrl);
-  window.location.reload();
-}
-
 export default function App() {
   const [selectedAttr, setSelectedAttr] = useState('全て');
   const [selectedTags, setSelectedTags] = useState([]);
@@ -31,36 +21,46 @@ export default function App() {
   const { tagsData } = useTagsData();
 
   // ========================================
-  // 2. 認証状態とViewportの直接管理
+  // 認証とリロードの制御
   // ========================================
   useEffect(() => {
-    // 起動時に最新のセッションを確認
-    const checkAuth = async () => {
+    const initAuth = async () => {
       try {
+        // 1. セッションを確認
         const { data: { session } } = await supabase.auth.getSession();
+        
+        // 2. セッションが取得でき、かつURLに認証情報（ハッシュ等）がある場合のみリロード
+        // これにより、Supabaseが認証を完了させた後にURLを掃除してリセット（PC版誤認解除）をかける
+        const hasAuthParams = window.location.hash.includes('access_token=') || 
+                             window.location.hash.includes('type=recovery') ||
+                             window.location.search.includes('code=');
+
+        if (session && hasAuthParams) {
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState(null, null, cleanUrl);
+          window.location.reload(); // ここでリロードしてPC版誤認を解除
+          return;
+        }
+
         setAuthInitialized(true);
         
-        // Viewportの強制リセット（ブラウザに再認識させる）
+        // Viewportの再設定
         const viewport = document.querySelector('meta[name="viewport"]');
         if (viewport) {
           viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
         }
       } catch (err) {
-        console.error('Auth check error:', err);
+        console.error('Auth initialization error:', err);
         setAuthInitialized(true);
       }
     };
 
-    checkAuth();
+    initAuth();
 
-    // ログイン状態の変化を監視
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        // ログイン成功時にもViewportを再リセット
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) {
-          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
-        }
+    // ログアウト時などの状態変化を監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setAuthInitialized(true);
       }
     });
 
