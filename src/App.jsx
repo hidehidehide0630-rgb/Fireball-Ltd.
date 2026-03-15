@@ -9,23 +9,63 @@ import TeamPanel from './components/TeamPanel';
 import Auth from './components/Auth';
 import CharacterSelectModal from './components/CharacterSelectModal';
 
-export default function App() {
-  // ========================================
-  // URL Normalization: ハッシュを即座に消去してPC版誤認を防止
-  // ========================================
-  if (window.location.hash && (window.location.hash.includes('access_token=') || window.location.hash.includes('type=recovery'))) {
-    // ハッシュが存在し、かつ認証に関わるキーワードが含まれる場合のみ即座にクリーンアップ
-    window.history.replaceState(null, null, window.location.pathname);
-  }
+// ========================================
+// 1. 最優先ロジック: URLハッシュの消去と強制リフレッシュ
+// ブラウザの「PC版誤認」をリセット状態で解除するために実行
+// ========================================
+if (typeof window !== 'undefined' && window.location.hash && window.location.hash.includes('access_token=')) {
+  const cleanUrl = window.location.origin + window.location.pathname;
+  window.history.replaceState(null, null, cleanUrl);
+  window.location.reload();
+}
 
+export default function App() {
   const [selectedAttr, setSelectedAttr] = useState('全て');
   const [selectedTags, setSelectedTags] = useState([]);
   const [activeTab, setActiveTab] = useState('team'); // 'team' or 'characters' (mobile only)
   const [battleCharacters, setBattleCharacters] = useState([null, null]);
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
   const [activeSlotIndex, setActiveSlotIndex] = useState(null);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   const { tagsData } = useTagsData();
+
+  // ========================================
+  // 2. 認証状態とViewportの直接管理
+  // ========================================
+  useEffect(() => {
+    // 起動時に最新のセッションを確認
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setAuthInitialized(true);
+        
+        // Viewportの強制リセット（ブラウザに再認識させる）
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        }
+      } catch (err) {
+        console.error('Auth check error:', err);
+        setAuthInitialized(true);
+      }
+    };
+
+    checkAuth();
+
+    // ログイン状態の変化を監視
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        // ログイン成功時にもViewportを再リセット
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const toggleTag = (tag) => {
     setSelectedTags(prev => {
@@ -52,7 +92,7 @@ export default function App() {
     characters,
     filteredCharacters,
     ownedIds,
-    loading,
+    loading: charactersLoading,
     error,
     filter,
     setFilter,
@@ -69,15 +109,16 @@ export default function App() {
     recommendations,
   } = useTeamBuilder(characters, ownedIds, tagsData, selectedAttr, selectedTags, battleCharacters);
 
-  if (loading) {
+  // 認証チェックとデータの読み込み両方を待つ
+  if (!authInitialized || charactersLoading) {
     return (
       <div 
-        className="min-h-screen flex items-center justify-center"
+        className="min-h-screen flex items-center justify-center bg-slate-900"
         style={{ overflowX: 'hidden', width: '100vw' }}
       >
         <div className="text-center space-y-4">
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-slate-400 text-sm">データを読み込み中...</p>
+          <p className="text-slate-400 text-sm">アプリを初期化中...</p>
         </div>
       </div>
     );
