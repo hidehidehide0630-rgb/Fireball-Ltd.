@@ -263,21 +263,6 @@ export default function App() {
       />
       </div>
 
-      {/* Debug Dashboard (期間限定) */}
-      <div className="fixed bottom-4 left-4 z-[9999] bg-black/90 text-[10px] p-3 rounded-lg border border-slate-700 shadow-2xl font-mono text-emerald-400 space-y-1 backdrop-blur-md">
-        <div className="flex justify-between gap-4">
-          <span className="text-slate-500">Auth:</span>
-          <span>{user ? (user.isFallback ? 'Recovering...' : 'Authenticated') : (charactersLoading ? 'Syncing...' : 'Guest')}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-slate-500">DB_ID:</span>
-          <span className="truncate max-w-[100px]">{user?.id || 'null'}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-slate-500">Last_Sync:</span>
-          <span className={syncStatus && syncStatus.includes('失敗') ? 'text-red-400' : 'text-emerald-400'}>{syncStatus || '未実行'}</span>
-        </div>
-      </div>
     </>
   );
 }

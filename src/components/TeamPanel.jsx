@@ -239,7 +239,7 @@ export default function TeamPanel({
                                     >
                                         <div>
                                             <p className="text-xs font-bold text-slate-200">
-                                                {st.selectedAttr}属性 / {st.tagEffects.length}タグ発動
+                                                {st.selectedAttr}属性
                                             </p>
                                             <p className="text-[10px] text-slate-500">
                                                 {new Date(st.timestamp).toLocaleString()}
@@ -294,7 +294,7 @@ export default function TeamPanel({
                                     <div className="text-center">
                                         <p className="text-[10px] text-purple-300 font-bold mb-0.5 tracking-wider">タグ発動</p>
                                         <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                                            Lv. {tagEffects ? tagEffects.reduce((sum, t) => sum + t.level, 0) : 0}
+                                            {tagEffects ? tagEffects.length : 0}個
                                         </p>
                                     </div>
                                 </div>
@@ -355,7 +355,6 @@ export default function TeamPanel({
                                                             {tagEf.name}
                                                             {tagEf.isSelected && <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">指定</span>}
                                                         </span>
-                                                        <span className="text-[10px] text-slate-400 bg-slate-900/50 px-1.5 py-0.5 rounded">Lv. {tagEf.level}</span>
                                                     </div>
                                                     <div className="text-xs text-slate-300 leading-relaxed">
                                                         {tagEf.description.split('[partition][/partition]').map((part, index) => (

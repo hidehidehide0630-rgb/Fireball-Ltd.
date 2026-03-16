@@ -49,9 +49,9 @@ const ShareImageTemplate = forwardRef(({ team, tagEffects, totalSupportPercent }
                         </div>
                         <div className="w-px bg-gray-700"></div>
                         <div className="text-right">
-                            <p className="text-xs text-gray-400 font-bold mb-1 uppercase tracking-wider">発動タグ総レベル</p>
+                            <p className="text-xs text-gray-400 font-bold mb-1 uppercase tracking-wider">発動タグ数</p>
                             <p className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                                Lv.{totalTagLevel}
+                                {tagEffects ? tagEffects.length : 0}
                             </p>
                         </div>
                     </div>
@@ -100,9 +100,6 @@ const ShareImageTemplate = forwardRef(({ team, tagEffects, totalSupportPercent }
                             <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-full shadow-sm border ${tagEf.isSelected ? 'bg-indigo-900/40 border-indigo-500/40' : 'bg-gray-700/60 border-gray-600'}`}>
                                 <span className={`text-[13px] font-bold ${tagEf.isSelected ? 'text-indigo-300' : 'text-gray-200'}`}>
                                     {tagEf.name} {tagEf.isSelected && '⭐'}
-                                </span>
-                                <span className="bg-emerald-500/20 text-emerald-400 text-[11px] font-bold px-2 py-0.5 rounded-full">
-                                    Lv.{tagEf.level}
                                 </span>
                             </div>
                         ))}
