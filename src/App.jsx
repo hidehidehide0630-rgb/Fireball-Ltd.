@@ -8,6 +8,7 @@ import FilterBar from './components/FilterBar';
 import TeamPanel from './components/TeamPanel';
 import Auth from './components/Auth';
 import CharacterSelectModal from './components/CharacterSelectModal';
+import ExportImage from './components/ExportImage';
 
 export default function App() {
   const [selectedAttr, setSelectedAttr] = useState('全て');
@@ -17,6 +18,7 @@ export default function App() {
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
   const [activeSlotIndex, setActiveSlotIndex] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const shareImageRef = useRef(null);
 
   const { tagsData } = useTagsData();
 
@@ -260,6 +262,13 @@ export default function App() {
           });
           setIsSelectModalOpen(false);
         }}
+      />
+      <ExportImage 
+        ref={shareImageRef} 
+        team={recommendations[0]?.team || []} 
+        tagEffects={recommendations[0]?.tagEffects || []} 
+        battleCharacters={battleCharacters} 
+        characters={characters} 
       />
       </div>
 

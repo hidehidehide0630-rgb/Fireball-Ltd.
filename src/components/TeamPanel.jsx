@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import TagSelector from './TagSelector';
-import domtoimage from 'dom-to-image-more';
+import html2canvas from 'html2canvas';
 import { useSavedTeams } from '../hooks/useSavedTeams';
-import ShareImageTemplate from './ShareImageTemplate';
 import BattleCharacterSelector from './BattleCharacterSelector';
 
 const ATTR_OPTIONS = [
@@ -50,20 +49,22 @@ export default function TeamPanel({
     }, [selectedAttr, selectedTags]);
 
     const handleShareImage = async () => {
-        if (!shareImageRef.current) return;
+        const element = document.getElementById('export-container');
+        if (!element) return;
+        
         setIsCapturing(true);
 
         try {
-            // dom-to-image-moreを使用して画像を生成
-            // oklchなどの最新CSS関数にもSVGのforeignObject経由で対応可能
-            const dataUrl = await domtoimage.toPng(shareImageRef.current, {
-                bgcolor: '#0f172a',
-                style: { transform: 'scale(1)' },
-                cors: true,
-                cacheBust: true
+            // html2canvasを使用し、scale: 2 で高精細化
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#0c0c16',
+                logging: false,
             });
+            
+            const dataUrl = canvas.toDataURL('image/png');
 
-            // Web Share APIが使える場合はシェアメニューを開く
             if (navigator.share && /mobile|android|iphone|ipad/i.test(navigator.userAgent)) {
                 try {
                     const blob = await (await fetch(dataUrl)).blob();
@@ -281,18 +282,7 @@ export default function TeamPanel({
                         </div>
                     ) : (
                         <>
-                            {/* Summary Badge (Aha! Experience) */}
-                            <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-xl p-3 flex flex-col items-center justify-center gap-2 mb-4 shadow-inner">
-                                <div className="flex items-center justify-center gap-8 w-full">
-                                    <div className="text-center">
-                                        <p className="text-[10px] text-purple-300 font-bold mb-0.5 tracking-wider">タグ発動</p>
-                                        <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                                            {tagEffects ? tagEffects.length : 0}個
-                                        </p>
-                                    </div>
-                                </div>
-                                <p className="text-[9px] text-slate-500 font-medium">※全キャラフル育成想定（Lv100/スキルLv5/★9メダル3枚/ブースト2）</p>
-                            </div>
+                            {/* Summary Badge has been removed as per user request */}
 
 
                             {/* Team grid */}
@@ -345,7 +335,7 @@ export default function TeamPanel({
                                                 <div key={`${tagEf.name}-${i}`} className={`bg-slate-800/80 rounded-lg p-2.5 border ${tagEf.isSelected ? 'border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'border-slate-700/50'}`}>
                                                     <div className="flex items-baseline justify-between mb-1">
                                                         <span className={`text-sm font-bold ${tagEf.isSelected ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                                            {tagEf.name}
+                                                            {tagEf.name} <span className="text-[10px] opacity-70 ml-1">Lv.{tagEf.level}</span>
                                                             {tagEf.isSelected && <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">指定</span>}
                                                         </span>
                                                     </div>
@@ -368,7 +358,7 @@ export default function TeamPanel({
                 </div>
             )}
 
-            <ShareImageTemplate ref={shareImageRef} team={team} tagEffects={tagEffects} battleCharacters={battleCharacters} characters={characters} />
+            {/* Image generation is now handled via id="export-container" in App.jsx */}
         </div>
         </div>
     );
