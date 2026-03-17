@@ -54,8 +54,8 @@ const ExportImage = forwardRef(({ team, tagEffects, battleCharacters = [], chara
                 position: 'fixed',
                 top: '-10000px',
                 left: '-10000px',
-                width: '1240px', // padding分を考慮して少し広めに設定 (1200 + 40)
-                height: '940px', // padding分を考慮して少し広めに設定 (900 + 40)
+                width: '1240px',
+                height: '1080px', // 940pxから1080pxに拡大して見切れを防止
                 backgroundColor: '#0c0c16',
                 fontFamily: "'Montserrat', 'Noto Sans JP', sans-serif",
                 color: '#fff',
@@ -155,7 +155,8 @@ const ExportImage = forwardRef(({ team, tagEffects, battleCharacters = [], chara
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        lineHeight: 1
+                                                        lineHeight: 1,
+                                                        paddingTop: '1px' // 微調整
                                                     }}>
                                                         {bc.attr}
                                                     </span>
@@ -217,7 +218,7 @@ const ExportImage = forwardRef(({ team, tagEffects, battleCharacters = [], chara
                                 <div key={c.id} style={{
                                     background: 'rgba(255,255,255,0.05)',
                                     borderRadius: '16px',
-                                    padding: '8px',
+                                    padding: '8px 8px 16px 8px', // 下部に余裕を持たせて名前の切れを防止
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     display: 'flex',
                                     flexDirection: 'column',
@@ -263,18 +264,23 @@ const ExportImage = forwardRef(({ team, tagEffects, battleCharacters = [], chara
                                         </div>
                                     </div>
                                     <p style={{
-                                        fontSize: '9px', // 10px以下に調整 (Requirement 1)
+                                        fontSize: '10px',
                                         fontWeight: 800,
-                                        marginTop: '4px', // 少し上げる
                                         textAlign: 'center',
-                                        margin: '4px 0 0 0',
-                                        whiteSpace: 'nowrap', // 改行なし (Requirement 1)
-                                        overflow: 'hidden', // はみ出し非表示 (Requirement 1)
-                                        textOverflow: 'ellipsis', // 「...」指定 (Requirement 1)
+                                        margin: '4px 0 0 0', // マージンを詰めて見栄えを改善
+                                        lineHeight: 1.1,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
                                         width: '100%',
                                         color: '#cbd5e1'
                                     }}>
-                                        {c.name}
+                                        {(() => {
+                                            // 「／」や「 」や「・」で区切られている場合、後半部分（名前本体）を優先
+                                            const name = c.name;
+                                            const parts = name.split(/[／\s/・]/);
+                                            return parts.length > 1 ? parts[parts.length - 1] : name;
+                                        })()}
                                     </p>
                                 </div>
                             );
@@ -305,6 +311,7 @@ const ExportImage = forwardRef(({ team, tagEffects, battleCharacters = [], chara
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     height: '24px',
+                                    lineHeight: '24px',
                                     boxSizing: 'border-box'
                                 }}>
                                     {t.name} Lv.{t.level}

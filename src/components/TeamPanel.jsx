@@ -20,6 +20,12 @@ const ATTR_COLORS = {
     '黒': { border: 'border-purple-500', glow: 'shadow-purple-500/20' },
 };
 
+const STYLE_ICONS = {
+    'アタッカー': '/attacker.png',
+    'ディフェンダー': '/defender.png',
+    'ゲッター': '/getter.png'
+};
+
 export default function TeamPanel({
     allTags,
     tagsData,
@@ -305,17 +311,25 @@ export default function TeamPanel({
                                                 {c.matchCount}hit
                                             </div>
 
-                                            <div className="aspect-square bg-slate-800/60 overflow-hidden">
+                                            <div className="aspect-square bg-slate-800/60 overflow-hidden relative">
                                                 <img
                                                     src={c.icon}
                                                     alt={c.name}
                                                     className="w-full h-full object-cover"
                                                     loading="lazy"
                                                 />
+                                                {/* Style Icon Overlay */}
+                                                <div className="absolute top-1 right-1 w-4 h-4 bg-black/40 backdrop-blur-[1px] rounded flex items-center justify-center p-0.5 pointer-events-none">
+                                                    <img src={STYLE_ICONS[c.style]} alt={c.style} className="w-full h-full object-contain" />
+                                                </div>
                                             </div>
                                             <div className="px-1 py-1 text-center">
                                                 <p className="text-[9px] font-semibold leading-tight truncate text-slate-200">
-                                                    {c.name}
+                                                    {(() => {
+                                                        const name = c.name;
+                                                        const parts = name.split(/[／\s/・]/);
+                                                        return parts.length > 1 ? parts[parts.length - 1] : name;
+                                                    })()}
                                                 </p>
                                             </div>
                                         </div>
