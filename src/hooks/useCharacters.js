@@ -24,12 +24,24 @@ export function useCharacters(selectedTags = []) {
 
     // キャラデータのロードと、ownedIdsの初期セット
     useEffect(() => {
-        fetch('./characters_data.json')
-            .then(res => {
-                if (!res.ok) throw new Error('データの読み込みに失敗しました');
-                return res.json();
-            })
-            .then(data => {
+        console.log('--- useEffect [Characters Load] Started ---');
+        const loadCharacters = async () => {
+            console.log('--- loadCharacters function called ---');
+            try {
+                console.log('Fetching from Supabase...');
+                const { data, error: fetchError } = await supabase
+                    .from('characters')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (fetchError) throw fetchError;
+                
+                console.log('--- Supabase Characters Fetched ---');
+                console.log('Count:', data.length);
+                if (data.length > 0) {
+                    console.log('First Character Name:', data[0].name);
+                }
+                
                 setCharacters(data);
 
                 // ローカルストレージから所持状況を即座に復元（デフォルト＝全所持）
@@ -57,10 +69,12 @@ export function useCharacters(selectedTags = []) {
                         setOwnedIds(allIds);
                     }
                 }
-            })
-            .catch(err => {
+            } catch (err) {
                 setError(err.message);
-            });
+            }
+        };
+
+        loadCharacters();
     }, []);
 
     // 認証とDB同期（キャラデータとは独立して実行）

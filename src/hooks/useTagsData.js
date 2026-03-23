@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 export function useTagsData() {
     const [tagsData, setTagsData] = useState([]);
@@ -6,19 +7,24 @@ export function useTagsData() {
     const [tagsError, setTagsError] = useState(null);
 
     useEffect(() => {
-        fetch('./tags_data.json')
-            .then(res => {
-                if (!res.ok) throw new Error('タグデータの読み込みに失敗しました');
-                return res.json();
-            })
-            .then(data => {
+        const loadTags = async () => {
+            try {
+                const { data, error: fetchError } = await supabase
+                    .from('tags')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (fetchError) throw fetchError;
+                
                 setTagsData(data);
                 setTagsLoading(false);
-            })
-            .catch(err => {
+            } catch (err) {
                 setTagsError(err.message);
                 setTagsLoading(false);
-            });
+            }
+        };
+
+        loadTags();
     }, []);
 
     return { tagsData, tagsLoading, tagsError };
