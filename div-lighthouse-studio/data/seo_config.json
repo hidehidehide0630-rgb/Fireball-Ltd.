@@ -1,0 +1,13 @@
+{
+  "target_sites": [
+    {
+      "name": "神ゲー攻略",
+      "url": "https://kamigame.jp",
+      "benchmarks": [
+        "https://gamewith.jp",
+        "https://game8.jp"
+      ]
+    }
+  ],
+  "check_interval": "daily"
+}
